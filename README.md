@@ -6,6 +6,8 @@ In this project we will analyse over some data available from <img alt="Covid Da
 To analyse the daily covid data received from GOI website and show that by transforming in the
 below format:
 
+<br>
+
 | Date  | State  | Confirmed  | Recovered  | Deceased  | Total tested  |
 | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ |
 |   |   |   |   |   |   |
@@ -27,6 +29,8 @@ Data Pipeline:
 
 Mapping: Below table shows us the mapping of the data and different files are used to decide where to get
 the data of each column,
+
+<br>
 
 | Report Fields  | Source file  | Source field  | Rule  |
 | ------------ | ------------ | ------------ | ------------ |

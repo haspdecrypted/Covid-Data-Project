@@ -1,0 +1,67 @@
+Creating a table to load statewise data:
+
+create external table project_data1(test_date STRING, State STRING, RT_PCR STRING, RAT STRING, Other STRING, Total_Tested INT, Tag STRING, Positive STRING, Negative STRING, Unconfirmed STRING, Cumulative STRING, Total_People_Currently_in_Quarantine STRING, Tag_People_in_Quarantine STRING, Total_People_Released_From_Quarantine STRING)
+row format delimited 
+fields terminated by ',' 
+stored as textfile
+tblproperties("skip.header.line.count"="1");
+
+>>load data local inpath 'statewise.csv' into table project_data1;
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Creating a table to load raw data:
+
+create external table rawtable1(Entry_ID INT, Date_Announced STRING, Detected_District STRING,Detected_State STRING,State_code INT,Num_Cases INT,Current_Status STRING)
+row format delimited 
+fields terminated by ',' lines terminated BY '\n'  
+stored as textfile
+tblproperties("skip.header.line.count"="1");
+
+>>load data local inpath 'raw_data' into rawtable1;
+----------------------------------------------------------------------------------------------------------------------------------
+#Three colum table:
+
+create external table finaltest_table1(test_date STRING, state STRING, cumm_count INT) 
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+---------------------------------------------------------------------------------------------------------------------------------
+# four column table:
+
+create table testtable1( test_date STRING, state STRING, cum_Tested INT, prev_day_cum int ) 
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+------------------------------------------------------------------------------------------------------------------------
+# five col:
+create external table fivetable1(date_announced string, detected_state string, positive int, negative int, deceased int) row format delimited fields terminated by ',' stored as textfile
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+# six col:
+create external table result1(date_announced string, state string, confirmed string, recovered string, deceased string, total_tested string)                  
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+val d= sqlContext.sql("insert overwrite table covidpro.testtable1 select test_date, sate, total_tested, lag(total_tested,1,0)  over(partition by state order by unix_timestamp(test_date, 'dd/MM/yyyy')) as prev_total_tested from covidpro.project_data1 where state is not null and total_tested is not null")
+
+val a= sqlContext.sql("insert overwrite table covidpro.finaltest_table1 select test_date, state, (cum_Tested-prev_day_cum) as daily_count from covidpro.testtable1")
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#creating another table finalrawt1:
+
+create external table finalrawt1(Date_Announced STRING,Detected_State STRING,Num_Cases INT,Current_Status STRING)
+row format delimited 
+fields terminated by ',' lines terminated BY '\n'  
+stored as textfile;
+-------------------------------------------------------------------------------------------------------------------------
+#Converting hospitalized and migrated_other to 'confrmed':
+
+>> insert overwrite table covidpro.finalrawt1 select Date_Announced,Detected_State,Num_Cases,regexp_replace(Current_Status,"Hospitalized|Migrated_Other|Migrated_other","Confirmed") as Current_Status from covidpro.rawtable1;
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+val dt=sqlContext.sql("insert overwrite table covidpro.fivetable1 select date_announced , detected_state, sum(case when current_status='Confirmed' then num_cases end) as Positive,sum(case when current_status ='Recovered' then num_cases end) as Negative,sum(case when current_status ='Deceased' then num_cases end) as Deceased from covidpro.finalrawt1 group by date_announced,detected_state")
+
+val ft=sqlContext.sql("insert overwrite table covidpro.result1 select a.date_announced,a.detected_state,a.positive,a.negative,a.deceased,b.cumm_count from covidpro.fivetable1 as a inner join covidpro.finaltest_table1 as b on a.date_announced=b.test_date and a.detected_state=b.state")
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

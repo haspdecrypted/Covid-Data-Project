@@ -1,0 +1,35 @@
+# Test Cases
+--------------------
+
+
+1) To Tally the distinct states in both the final table (three column) generated from state wise and five column table
+------------------------------------------------------------------------------------------------------------------------
+>> select distinct(state) from  finaltest_table1;  // Answer: 36
+>> select distinct(detected_state) from fivetable1;  // Answer: 36
+
+2) To check a record to show that the input used matches with the final record
+----------------------------------------------------------------------------------
+>> select * from columnfive where date_announced = '25-03-2021';
+
+output:
+25-03-2021	Manipur	2	-1	NULL
+
+>> select * from raw where date_announced = '25-03-2021';
+
+output:
+545378	25-03-2021	Imphal West	Manipur	MN	-1	Hospitalized
+545379	25-03-2021	Imphal East	Manipur	MN	2	Hospitalized
+545380	25-03-2021	Bishnupur	Manipur	MN	1	Hospitalized
+545381	25-03-2021		Manipur	MN	-1	Recovered
+
+Thus, we can conclude that the data recovered from the five column table tells us a sum of confirmed, recvovered and deceased.
+So, this is the only value negative in the whole list and is matching with the input file in recovered section as the hospitalised value is changed into the confirmed.
+
+3) Dadra and Nagar Haveli and Daman and Diu data absent in final table due to mismatch (year 2020 in statewise and 2021 in raw data) in two sets thus, creating a new table for data of daman and diu.
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+create external table ddt(date_announced string, detected_state string, positive int, negative int, deceased int) row format delimited fields terminated by ',' stored as textfile;
+insert into table ddt select * from columnfive where detected_state = 'Dadra and Nagar Haveli and Daman and Diu';
+select * from ddt;
+
+

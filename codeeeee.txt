@@ -1,0 +1,141 @@
+#raw combined
+------------------
+create external table combined(entry_id INT, state_patient_number INT, date_announced STRING, age INT, gender STRING, city STRING, district STRING, state STRING, state_code STRING, num_cases INT, status STRING, suspect STRING, notes STRING,
+source_1 STRING, source_2 STRING, source_3 STRING, nationality STRING, type_of_transmission STRING, status_change_date STRING, patient_number INT)
+row format delimited
+fields terminated by ','
+stored as textfile;
+
+#rawdata
+--------
+create external table rawdata(
+tested_date STRING,
+state STRING,
+num_cases INT,
+status STRING)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+#final_raw
+-------------
+
+create external table finalraw(
+tested_date STRING,
+state STRING,
+confirmed STRING,
+recovered STRING,
+deceased STRING)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+@stateraw
+----------
+
+create external table state_data1 (
+date_announced STRING, 
+State STRING, 
+RTPCR_Test STRING, 
+RAT STRING, 
+Other_Tests STRING, 
+Total_Tested INT, 
+Tag STRING, 
+Positive STRING, 
+Negative STRING, 
+Unconfirmed STRING, 
+Cumulative STRING, 
+Total_People_Currently_in_Quarantine STRING, 
+Tag_People_in_Quarantine STRING, 
+Total_People_Released_From_Quarantine STRING)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+#ext state
+-------------
+
+create external table state_data2 (
+tested_date STRING, 
+state STRING,
+total_tested INT)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+#previous
+-----------
+
+create external table previous(tested_date STRING, state STRING, total_tested INT, previous_day_cumulative_tested INT ) 
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+#eachday
+-----------
+
+create external table each_day (
+tested_date STRING, 
+state STRING,
+total_tested INT)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+#result
+---------
+
+create external table result(
+tested_date STRING,
+state STRING,
+confirmed STRING,
+recovered STRING,
+deceased STRING,
+total_tested STRING)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+# insert raw
+---------------
+insert overwrite table rawdatashow tables;
+
+select regexp_replace(date_announced,"/","-") as tested_date,state,num_cases,
+regexp_replace(status,"Migrated_Other|Migrated_other|Hospitalized","Confirmed") as status from combined
+where num_cases is not null and status is not null
+order by unix_timestamp(tested_date,'dd-MM-yyyy');
+
+#insert statedata 2
+------------------
+
+insert overwrite table state_data2
+select regexp_replace(date_announced,"/","-") as tested_date,State,Total_Tested from state_data1
+where Total_Tested is not null and date_announced is not null and State is not null;
+
+#ddt table
+-----------
+
+create external table roj(
+tested_date STRING,
+state STRING,
+confirmed STRING,
+recovered STRING,
+deceased STRING,
+total_tested STRING)
+row format delimited 
+fields terminated by ',' 
+stored as textfile;
+
+create table temp1 as
+select r.tested_date, r.state, r.confirmed, r.recovered, r.deceased, e.total_tested from sputnik.each_day e 
+right outer join sputnik.finalraw r on e.tested_date=r.tested_date and e.state=r.state order by unix_timestamp(r.tested_date,'dd-MM-yyyy'),r.state;
+
+#nnresult
+-----------
+
+create table nnresult as select nvl(tested_date,0),nvl(state,0),nvl(confirmed,0),nvl(recovered,0),nvl(deceased,0),nvl(total_tested,0) from result;
+
+#substringmethod
+------------------
+
+
